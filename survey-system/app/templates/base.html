@@ -38,8 +38,8 @@
           <button type="submit">退出</button>
         </form>
       {% else %}
-        <a href="/login">登录</a>
-        <a href="/register">注册</a>
+        <a href="/login{% if next_url %}?next={{ next_url | urlencode }}{% endif %}">登录</a>
+        <a href="/register{% if next_url %}?next={{ next_url | urlencode }}{% endif %}">注册</a>
       {% endif %}
     </nav>
   </header>

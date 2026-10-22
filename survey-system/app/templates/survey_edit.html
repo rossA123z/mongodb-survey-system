@@ -230,6 +230,7 @@
     </form>
     {% endif %}
     {% else %}
+    <p>{{ q.title }}</p>
     <ul>
       {% for o in q.options %}<li>{{ o.text }}</li>{% endfor %}
     </ul>

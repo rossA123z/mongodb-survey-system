@@ -569,10 +569,11 @@ def create_app() -> FastAPI:
         return RedirectResponse("/surveys", status_code=303)
 
     @app.get("/register", include_in_schema=False)
-    def register_page(request: Request):
+    def register_page(request: Request, next_url: str = Query("", alias="next")):
+        next_url = _safe_next(next_url) if next_url else ""
         if _optional_username(request):
-            return RedirectResponse("/surveys", status_code=303)
-        return _render(request, "register.html", {})
+            return RedirectResponse(next_url or "/surveys", status_code=303)
+        return _render(request, "register.html", {"next_url": next_url})
 
     @app.post("/register", include_in_schema=False)
     def register_submit(
@@ -580,8 +581,10 @@ def create_app() -> FastAPI:
         username: str = Form(""),
         password: str = Form(""),
         csrf_token: str = Form(""),
+        next_url: str = Form("", alias="next"),
     ):
         _check_csrf(request, csrf_token)
+        next_url = _safe_next(next_url) if next_url else ""
         username = username.strip()
         errors = {}
         if not username:
@@ -590,7 +593,10 @@ def create_app() -> FastAPI:
             errors["password"] = "请填写密码"
         if errors:
             return _render(
-                request, "register.html", {"errors": errors, "username": username}, 400
+                request,
+                "register.html",
+                {"errors": errors, "username": username, "next_url": next_url},
+                400,
             )
         try:
             get_db()["users"].insert_one(
@@ -604,10 +610,12 @@ def create_app() -> FastAPI:
             return _render(
                 request,
                 "register.html",
-                {"errors": {"username": "用户名已被占用"}, "username": username},
+                {"errors": {"username": "用户名已被占用"}, "username": username,
+                 "next_url": next_url},
                 400,
             )
-        return RedirectResponse("/login", status_code=303)
+        target = f"/login?next={quote(next_url, safe='')}" if next_url else "/login"
+        return RedirectResponse(target, status_code=303)
 
     @app.get("/login", include_in_schema=False)
     def login_page(request: Request, next_url: str = Query("/surveys", alias="next")):

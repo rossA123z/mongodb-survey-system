@@ -4,6 +4,7 @@
 <h1>注册</h1>
 <form method="post" action="/register">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="next" value="{{ next_url or '' }}">
   <p>
     <label for="username">用户名</label>
     <input id="username" name="username" type="text" autocomplete="username" value="{{ username or '' }}">
@@ -16,5 +17,5 @@
   </p>
   <button type="submit">注册</button>
 </form>
-<p>已有账号？<a href="/login">去登录</a></p>
+<p>已有账号？<a href="/login{% if next_url %}?next={{ next_url | urlencode }}{% endif %}">去登录</a></p>
 {% endblock %}

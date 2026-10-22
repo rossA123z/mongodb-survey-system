@@ -18,5 +18,5 @@
   </p>
   <button type="submit">登录</button>
 </form>
-<p>还没有账号？<a href="/register">注册新账号</a></p>
+<p>还没有账号？<a href="/register{% if next_url %}?next={{ next_url | urlencode }}{% endif %}">注册新账号</a></p>
 {% endblock %}

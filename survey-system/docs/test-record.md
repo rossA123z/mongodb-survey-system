@@ -120,3 +120,12 @@ SURVEY_TEST_DB_NAME=survey_test_t07 .venv/Scripts/python -m pytest -q
 - 自动测试经 HTTP 接口观察行为，不直接查库断言；并发效果用真实并发提交验证。
 - 网页交互由第 4 节与 `docs/acceptance-web.md` 覆盖。
 - 接口测试不代替浏览器交互验收，浏览器步骤也不代替回归测试。
+
+## 网页验收缺陷修复回归（2026-10-22）
+
+- 缺陷：新用户从问卷链接注册后丢失 next；发布与关闭后管理页缺少题干。另纠正 acceptance-web.md 的 K3/K4必答填写顺序。
+- 新增 tests/test_web_acceptance_fixes.py 共10例，覆盖登录到注册再到登录的返回链路、带查询参数的目标、注册校验/重名错误后保留目标、拒绝外部目标、默认跳转，以及发布/关闭后题干按文本显示。修改前9失败/1通过，修改后10通过。
+- 使用独立测试库 survey_test_acceptance_fixes_20261022 执行全套：`.venv/Scripts/python -X utf8 -m pytest -q`。
+- 实际结果：**218 passed, 1 warning in 533.19s (0:08:53)**。warning 为 Starlette 测试客户端依赖弃用提示，未为此改依赖。
+- 独立 Playwright 后台浏览器复测55个文档步骤+3项附加检查全部通过，随后在重启的原8000服务复核注册/登录错误重试返回和冻结题干显示通过。
+- 完整报告：[acceptance-web-fix-retest-2026-10-22.md](acceptance-web-fix-retest-2026-10-22.md)。未做截图像素对比和多浏览器验证，未推送。
