@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}我的问卷 · 问卷系统{% endblock %}
+{% block content %}
+<h1>我的问卷</h1>
+<p><a href="/surveys/new">新建问卷</a></p>
+{% if surveys %}
+<ul class="surveys">
+  {% for survey in surveys %}
+  <li>
+    <h2>{{ survey.title }}</h2>
+    {% if survey.description %}<p>{{ survey.description }}</p>{% endif %}
+    <p class="status">状态：{% if survey.status == 'draft' %}草稿{% elif survey.status == 'published' %}已发布{% elif survey.status == 'closed' %}已关闭{% else %}{{ survey.status }}{% endif %}</p>
+    <p><a href="/surveys/{{ survey.id }}/edit">管理 / 查看</a></p>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>你还没有问卷，点击上方“新建问卷”开始创建。</p>
+{% endif %}
+{% endblock %}

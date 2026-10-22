@@ -1,0 +1,26 @@
+{% macro render_question(stat) %}
+{% if stat.type in ('single', 'multi') %}
+<ul class="stat-options">
+  {% for option in stat.options %}
+  <li>{{ option.text }}：{{ option.count }}</li>
+  {% endfor %}
+</ul>
+<p>有效回答总数：{{ stat.answered_total }}</p>
+{% elif stat.type == 'text' %}
+<p>有效回答总数：{{ stat.answered_total }}</p>
+{% if stat.texts %}
+<ul class="stat-texts">
+  {% for text in stat.texts %}<li>{{ text }}</li>{% endfor %}
+</ul>
+{% else %}
+<p class="status">暂无填空内容。</p>
+{% endif %}
+{% elif stat.type == 'number' %}
+<p>有效回答总数：{{ stat.answered_total }}</p>
+{% if stat.average is none %}
+<p>平均值：暂无（无回答）。</p>
+{% else %}
+<p>平均值：{{ stat.average }}</p>
+{% endif %}
+{% endif %}
+{% endmacro %}

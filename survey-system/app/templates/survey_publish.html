@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}发布问卷 · 问卷系统{% endblock %}
+{% block content %}
+<h1>发布问卷</h1>
+<p>问卷：{{ survey.title }}</p>
+<p>当前共 {{ survey.questions|length }} 道题。</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+<form method="post" action="/surveys/{{ survey.id }}/publish">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p>
+    <label>
+      <input type="checkbox" name="anonymous" {% if survey.config.anonymous %}checked{% endif %}>
+      匿名填写（对创建者隐藏填写者身份，系统仍可识别账号以限制重复）
+    </label>
+  </p>
+  <p>
+    <label>
+      <input type="checkbox" name="allow_multiple" {% if survey.config.allow_multiple %}checked{% endif %}>
+      允许同一账号重复填写（默认为关闭）
+    </label>
+  </p>
+  <p>发布后题目、选项与以上配置都会被冻结，不能再修改。</p>
+  <button type="submit">发布问卷</button>
+</form>
+<p><a href="/surveys/{{ survey.id }}/edit">返回编辑</a></p>
+{% endblock %}

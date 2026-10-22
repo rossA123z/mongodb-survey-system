@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}注册 · 问卷系统{% endblock %}
+{% block content %}
+<h1>注册</h1>
+<form method="post" action="/register">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p>
+    <label for="username">用户名</label>
+    <input id="username" name="username" type="text" autocomplete="username" value="{{ username or '' }}">
+    {% if errors and errors.username %}<span class="field-error">{{ errors.username }}</span>{% endif %}
+  </p>
+  <p>
+    <label for="password">密码</label>
+    <input id="password" name="password" type="password" autocomplete="new-password">
+    {% if errors and errors.password %}<span class="field-error">{{ errors.password }}</span>{% endif %}
+  </p>
+  <button type="submit">注册</button>
+</form>
+<p>已有账号？<a href="/login">去登录</a></p>
+{% endblock %}

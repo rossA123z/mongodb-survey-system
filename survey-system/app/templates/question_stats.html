@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% import "_stat.html" as stat %}
+{% block title %}题目统计 · {{ question.title }}{% endblock %}
+{% block content %}
+<h1>题目统计</h1>
+<p class="status">问卷：{{ title }} · 已收到答卷：{{ response_count }} 份</p>
+<h2>{{ question.title }}（{{ {'single': '单选题', 'multi': '多选题', 'text': '文本题', 'number': '数字题'}.get(question.type, '题目') }}）</h2>
+{{ stat.render_question(question) }}
+<p><a href="/surveys/{{ survey_id }}/stats">返回问卷统计</a></p>
+{% endblock %}

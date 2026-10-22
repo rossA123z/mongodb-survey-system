@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}{{ survey.title }} · 填写问卷{% endblock %}
+{% block content %}
+<h1>{{ survey.title }}</h1>
+{% if survey.description %}<p>{{ survey.description }}</p>{% endif %}
+
+<form method="post" action="/s/{{ survey.id }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% for q in survey.questions %}
+  {% set qtype = q.type or 'single' %}
+  {% set value = values.get(q.qid) if values else none %}
+  <fieldset class="question" data-qid="{{ q.qid }}">
+    <legend>第 {{ loop.index }} 题 {{ q.title }}{% if q.required %}（必答）{% endif %}</legend>
+    {% if errors and errors.get(q.qid) %}
+    <span class="field-error" role="alert">{{ errors[q.qid] }}</span>
+    {% endif %}
+    {% if qtype == 'multi' %}
+    {% for o in q.options %}
+    <label>
+      <input type="checkbox" name="answer_{{ q.qid }}" value="{{ o.oid }}"
+             {% if value and o.oid in value %}checked{% endif %}>
+      {{ o.text }}
+    </label>
+    {% endfor %}
+    {% elif qtype == 'text' %}
+    <textarea name="answer_{{ q.qid }}" rows="3">{{ value if value is not none else '' }}</textarea>
+    {% elif qtype == 'number' %}
+    <input type="number" step="any" name="answer_{{ q.qid }}"
+           value="{{ value if value is not none else '' }}">
+    {% else %}
+    {% for o in q.options %}
+    <label>
+      <input type="radio" name="answer_{{ q.qid }}" value="{{ o.oid }}"
+             {% if value == o.oid %}checked{% endif %}>
+      {{ o.text }}
+    </label>
+    {% endfor %}
+    {% endif %}
+  </fieldset>
+  {% endfor %}
+  <button type="submit">下一步</button>
+</form>
+
+{# 题目与规则数据供前端按规则动态显示 / 隐藏题目；服务端仍会从第一题重算有效路径。 #}
+<script id="survey-questions" type="application/json">{{ survey.questions | tojson }}</script>
+<script>
+  (function () {
+    var el = document.getElementById('survey-questions');
+    if (!el) { return; }
+    var questions = JSON.parse(el.textContent);
+    var indexOf = {};
+    questions.forEach(function (q, i) { indexOf[q.qid] = i; });
+
+    function answerOf(q) {
+      var name = 'answer_' + q.qid;
+      var type = q.type || 'single';
+      if (type === 'multi') {
+        return Array.prototype.slice
+          .call(document.querySelectorAll('input[name="' + name + '"]:checked'))
+          .map(function (n) { return n.value; });
+      }
+      var input = document.querySelector('[name="' + name + '"]');
+      if (!input) { return ''; }
+      if (type === 'number') { return input.value; }
+      if (type === 'text') { return input.value; }
+      var checked = document.querySelector('input[name="' + name + '"]:checked');
+      return checked ? checked.value : '';
+    }
+
+    function matches(condition, answer, type) {
+      if (type === 'multi') {
+        if (!Array.isArray(answer) || answer.length === 0) { return false; }
+        var wanted = condition.oids || [];
+        if (!wanted.length) { return false; }
+        if (condition.op === 'all') {
+          return wanted.every(function (o) { return answer.indexOf(o) !== -1; });
+        }
+        return wanted.some(function (o) { return answer.indexOf(o) !== -1; });
+      }
+      if (type === 'number') {
+        var value = parseFloat(answer);
+        if (!isFinite(value)) { return false; }
+        if (condition.op === 'eq') { return value === Number(condition.value); }
+        if (condition.op === 'gt') { return value > Number(condition.value); }
+        if (condition.op === 'lt') { return value < Number(condition.value); }
+        if (condition.op === 'between') {
+          return value >= Number(condition.min) && value <= Number(condition.max);
+        }
+        return false;
+      }
+      if (!answer) { return false; }
+      return answer === condition.oid;
+    }
+
+    function targetOf(q) {
+      var answer = answerOf(q);
+      var type = q.type || 'single';
+      var rules = q.rules || [];
+      for (var i = 0; i < rules.length; i++) {
+        if (matches(rules[i].condition || {}, answer, type)) {
+          return rules[i].target;
+        }
+      }
+      return null;
+    }
+
+    function refresh() {
+      var visible = {};
+      var idx = 0;
+      var guard = 0;
+      while (idx >= 0 && idx < questions.length && guard <= questions.length) {
+        guard += 1;
+        var q = questions[idx];
+        if (visible[q.qid]) { break; }
+        visible[q.qid] = true;
+        var target = targetOf(q);
+        if (target === 'end') { break; }
+        idx = (target && indexOf[target] !== undefined) ? indexOf[target] : idx + 1;
+      }
+      questions.forEach(function (q) {
+        var field = document.querySelector('fieldset.question[data-qid="' + q.qid + '"]');
+        if (field) { field.hidden = !visible[q.qid]; }
+      });
+    }
+
+    document.addEventListener('change', refresh);
+    document.addEventListener('input', refresh);
+    refresh();
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}确认提交 · {{ survey.title }}{% endblock %}
+{% block content %}
+<h1>确认提交</h1>
+<p>问卷：{{ survey.title }}</p>
+<p>请核对你的回答，确认后提交：</p>
+<ul class="selections">
+  {% for item in selections %}
+  <li>{{ item.title }}：{{ item.text }}</li>
+  {% endfor %}
+</ul>
+<form method="post" action="/s/{{ survey.id }}/submit">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% for answer in answers %}
+    {% for oid in answer.get('oids', []) %}
+    <input type="hidden" name="answer_{{ answer.qid }}" value="{{ oid }}">
+    {% endfor %}
+    {% if answer.get('oid') is not none %}
+    <input type="hidden" name="answer_{{ answer.qid }}" value="{{ answer.oid }}">
+    {% endif %}
+    {% if answer.get('text') is not none %}
+    <input type="hidden" name="answer_{{ answer.qid }}" value="{{ answer.text }}">
+    {% endif %}
+    {% if answer.get('number') is not none %}
+    <input type="hidden" name="answer_{{ answer.qid }}" value="{{ answer.number }}">
+    {% endif %}
+  {% endfor %}
+  <button type="submit">确认提交</button>
+  <button type="submit" formaction="/s/{{ survey.id }}/back" formnovalidate>返回修改</button>
+</form>
+{% endblock %}

@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% block title %}编辑问卷 · 问卷系统{% endblock %}
+
+{% macro rule_row(scope, q, qtype, index, rule, questions) %}
+{% set condition = (rule.get('condition', {}) if rule else {}) %}
+<fieldset class="rule-row">
+  <legend>规则 {{ index + 1 }}</legend>
+  {% if rule %}<input type="hidden" name="rules-{{ index }}-rid" value="{{ rule.get('rid', '') }}">{% endif %}
+  <p>
+    <label for="rules-{{ index }}-target-{{ scope }}">跳转目标</label>
+    <select id="rules-{{ index }}-target-{{ scope }}" name="rules-{{ index }}-target">
+      <option value="">（未设置）</option>
+      <option value="end" {% if rule and rule.get('target') == 'end' %}selected{% endif %}>结束（进入确认页）</option>
+      {% for item in questions %}
+      <option value="{{ item.qid }}" {% if rule and rule.get('target') == item.qid %}selected{% endif %}>第 {{ loop.index }} 题 {{ item.title }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  {% if qtype == 'single' %}
+  <p>
+    <label for="rules-{{ index }}-oid-{{ scope }}">触发条件：选中该选项</label>
+    <select id="rules-{{ index }}-oid-{{ scope }}" name="rules-{{ index }}-oid">
+      <option value="">（未设置）</option>
+      {% for o in q.options %}
+      <option value="{{ o.oid }}" {% if condition.get('oid') == o.oid %}selected{% endif %}>{{ o.text }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  {% elif qtype == 'multi' %}
+  <p>
+    <label for="rules-{{ index }}-op-{{ scope }}">触发条件</label>
+    <select id="rules-{{ index }}-op-{{ scope }}" name="rules-{{ index }}-op">
+      <option value="">（未设置）</option>
+      <option value="any" {% if condition.get('op') == 'any' %}selected{% endif %}>包含任一选中项</option>
+      <option value="all" {% if condition.get('op') == 'all' %}selected{% endif %}>包含全部选中项</option>
+    </select>
+  </p>
+  <fieldset class="options">
+    <legend>指定选项</legend>
+    {% for o in q.options %}
+    <label>
+      <input type="checkbox" name="rules-{{ index }}-oids" value="{{ o.oid }}"
+             {% if o.oid in (condition.get('oids') or []) %}checked{% endif %}>
+      {{ o.text }}
+    </label>
+    {% endfor %}
+  </fieldset>
+  {% elif qtype == 'number' %}
+  <p>
+    <label for="rules-{{ index }}-op-{{ scope }}">触发条件</label>
+    <select id="rules-{{ index }}-op-{{ scope }}" name="rules-{{ index }}-op">
+      <option value="">（未设置）</option>
+      <option value="eq" {% if condition.get('op') == 'eq' %}selected{% endif %}>等于</option>
+      <option value="gt" {% if condition.get('op') == 'gt' %}selected{% endif %}>大于</option>
+      <option value="lt" {% if condition.get('op') == 'lt' %}selected{% endif %}>小于</option>
+      <option value="between" {% if condition.get('op') == 'between' %}selected{% endif %}>区间（含两端）</option>
+    </select>
+  </p>
+  <p>
+    <label for="rules-{{ index }}-value-{{ scope }}">比较值（等于 / 大于 / 小于）</label>
+    <input id="rules-{{ index }}-value-{{ scope }}" name="rules-{{ index }}-value" type="number" step="any"
+           value="{{ condition.get('value') if condition.get('value') is not none else '' }}">
+  </p>
+  <p>
+    <label for="rules-{{ index }}-min-{{ scope }}">区间下限</label>
+    <input id="rules-{{ index }}-min-{{ scope }}" name="rules-{{ index }}-min" type="number" step="any"
+           value="{{ condition.get('min') if condition.get('min') is not none else '' }}">
+  </p>
+  <p>
+    <label for="rules-{{ index }}-max-{{ scope }}">区间上限</label>
+    <input id="rules-{{ index }}-max-{{ scope }}" name="rules-{{ index }}-max" type="number" step="any"
+           value="{{ condition.get('max') if condition.get('max') is not none else '' }}">
+  </p>
+  {% endif %}
+  {% if rule %}
+  <p class="rule-actions">
+    <button type="submit" name="rule_move" value="{{ index }}-up">上移规则</button>
+    <button type="submit" name="rule_move" value="{{ index }}-down">下移规则</button>
+  </p>
+  {% endif %}
+</fieldset>
+{% endmacro %}
+
+{% macro limit_inputs(scope, q, only=none) %}
+{% if only is none or only == 'multi' %}
+<fieldset class="limits" data-type="multi">
+  <legend>多选：选择数量限制</legend>
+  <p>
+    <label for="min_choices-{{ scope }}">最少选择数</label>
+    <input id="min_choices-{{ scope }}" name="min_choices" type="number" min="0"
+           value="{{ q.get('min_choices') if q.get('min_choices') is not none else '' }}">
+  </p>
+  <p>
+    <label for="max_choices-{{ scope }}">最多选择数</label>
+    <input id="max_choices-{{ scope }}" name="max_choices" type="number" min="0"
+           value="{{ q.get('max_choices') if q.get('max_choices') is not none else '' }}">
+  </p>
+  <p class="hint">固定数量时把最少与最多填成同一个数。</p>
+</fieldset>
+{% endif %}
+{% if only is none or only == 'text' %}
+<fieldset class="limits" data-type="text">
+  <legend>文本：字数限制（按字符计）</legend>
+  <p>
+    <label for="min_length-{{ scope }}">最少字数</label>
+    <input id="min_length-{{ scope }}" name="min_length" type="number" min="0"
+           value="{{ q.get('min_length') if q.get('min_length') is not none else '' }}">
+  </p>
+  <p>
+    <label for="max_length-{{ scope }}">最多字数</label>
+    <input id="max_length-{{ scope }}" name="max_length" type="number" min="0"
+           value="{{ q.get('max_length') if q.get('max_length') is not none else '' }}">
+  </p>
+</fieldset>
+{% endif %}
+{% if only is none or only == 'number' %}
+<fieldset class="limits" data-type="number">
+  <legend>数字：范围与整数</legend>
+  <p>
+    <label for="min_value-{{ scope }}">最小值</label>
+    <input id="min_value-{{ scope }}" name="min_value" type="number" step="any"
+           value="{{ q.get('min_value') if q.get('min_value') is not none else '' }}">
+  </p>
+  <p>
+    <label for="max_value-{{ scope }}">最大值</label>
+    <input id="max_value-{{ scope }}" name="max_value" type="number" step="any"
+           value="{{ q.get('max_value') if q.get('max_value') is not none else '' }}">
+  </p>
+  <p>
+    <label><input type="checkbox" name="integer" {% if q.get('integer') %}checked{% endif %}> 只接受整数</label>
+  </p>
+</fieldset>
+{% endif %}
+{% endmacro %}
+
+{% block content %}
+<h1>{{ survey.title }}</h1>
+{% if survey.description %}<p>{{ survey.description }}</p>{% endif %}
+<p class="status">状态：{% if survey.status == 'draft' %}草稿{% elif survey.status == 'published' %}已发布{% else %}已关闭{% endif %}</p>
+
+{% if share_url %}
+<div class="link-box">
+  <p>问卷已发布，可分发的填写链接：</p>
+  <p><a href="{{ share_url }}">{{ share_url }}</a></p>
+</div>
+{% endif %}
+
+{% if survey.status != 'draft' %}
+<p><a href="/surveys/{{ survey.id }}/stats">查看统计</a></p>
+{% endif %}
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% if survey.status == 'closed' %}
+<div class="lifecycle">
+  <h2>收集状态</h2>
+  <p class="status">问卷已关闭，不再接受答卷；关闭为终态，不能重新开放。</p>
+</div>
+{% else %}
+<div class="lifecycle">
+  <h2>截止时间与关闭</h2>
+  {% if survey.deadline %}
+  <p class="status">当前截止时间（本地时间）：{{ deadline_display }}</p>
+  {% if survey.expired %}<p class="status">问卷已截止，不再接受答卷。</p>{% endif %}
+  {% else %}
+  <p class="status">未设置截止时间。</p>
+  {% endif %}
+  <form method="post" action="/surveys/{{ survey.id }}/deadline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p>
+      <label for="deadline-{{ survey.id }}">截止时间（本地时间，留空表示不设截止）</label>
+      <input id="deadline-{{ survey.id }}" type="datetime-local" name="deadline" value="{{ deadline_value }}">
+    </p>
+    <button type="submit">保存截止时间</button>
+  </form>
+  {% if survey.status == 'published' %}
+  <form method="post" action="/surveys/{{ survey.id }}/close">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p>关闭后问卷进入终态，不能再重新开放，也不能再填写或提交。</p>
+    <button type="submit">关闭问卷</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+<h2>题目</h2>
+{% if survey.questions %}
+  {% for q in survey.questions %}
+  {% set qtype = q.type or 'single' %}
+  <div class="question">
+    <p>第 {{ loop.index }} 题（{{ {'single': '单选题', 'multi': '多选题', 'text': '文本题', 'number': '数字题'}.get(qtype, '题目') }}）{% if q.required %}（必答）{% endif %}</p>
+    {% if survey.status == 'draft' %}
+    <form method="post" action="/surveys/{{ survey.id }}/questions/{{ q.qid }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <p>
+        <label for="title-{{ q.qid }}">题干</label>
+        <input id="title-{{ q.qid }}" name="title" type="text" value="{{ q.title }}">
+      </p>
+      <p><label><input type="checkbox" name="required" {% if q.required %}checked{% endif %}> 必答</label></p>
+      {% if qtype in ('single', 'multi') %}
+      <fieldset class="options" data-with-oid="true">
+        <legend>选项（可追加，空白行会被忽略）</legend>
+        {% for o in q.options %}
+        <p>
+          <input type="text" name="option" value="{{ o.text }}" aria-label="选项内容">
+          <input type="hidden" name="oid" value="{{ o.oid }}">
+        </p>
+        {% endfor %}
+        <p><button type="button" class="add-option">添加选项</button></p>
+      </fieldset>
+      {% endif %}
+      {{ limit_inputs(q.qid, q, qtype) }}
+      <button type="submit" name="action" value="update">保存</button>
+      <button type="submit" name="action" value="up">上移</button>
+      <button type="submit" name="action" value="down">下移</button>
+      <button type="submit" name="action" value="delete">删除</button>
+    </form>
+    {% if qtype in ('single', 'multi', 'number') %}
+    {% set existing_rules = q.get('rules', []) %}
+    <form method="post" action="/surveys/{{ survey.id }}/questions/{{ q.qid }}/rules" class="rules-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <fieldset>
+        <legend>跳转规则（按从上到下顺序，第一条命中生效；未命中进入下一题）</legend>
+        {% for rule in existing_rules %}
+        {{ rule_row(q.qid, q, qtype, loop.index0, rule, survey.questions) }}
+        {% endfor %}
+        {{ rule_row(q.qid, q, qtype, existing_rules | length, none, survey.questions) }}
+        <button type="submit">保存规则</button>
+      </fieldset>
+    </form>
+    {% endif %}
+    {% else %}
+    <ul>
+      {% for o in q.options %}<li>{{ o.text }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+<p>还没有题目。</p>
+{% endif %}
+
+{% if survey.status == 'draft' %}
+<h2>添加题目</h2>
+<form id="add-question" method="post" action="/surveys/{{ survey.id }}/questions">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p>
+    <label for="new-type">题型</label>
+    <select id="new-type" name="type">
+      <option value="single">单选题</option>
+      <option value="multi">多选题</option>
+      <option value="text">文本题</option>
+      <option value="number">数字题</option>
+    </select>
+  </p>
+  <p>
+    <label for="new-title">题干</label>
+    <input id="new-title" name="title" type="text">
+  </p>
+  <p><label><input type="checkbox" name="required"> 必答</label></p>
+  <fieldset class="options" data-for="single multi">
+    <legend>选项（单选题、多选题；可追加，空白行会被忽略）</legend>
+    <p><input type="text" name="option" value="" aria-label="选项内容"></p>
+    <p><input type="text" name="option" value="" aria-label="选项内容"></p>
+    <p><button type="button" class="add-option">添加选项</button></p>
+  </fieldset>
+  {{ limit_inputs('new', {}) }}
+  <button type="submit">添加题目</button>
+</form>
+<script>
+  (function () {
+    var select = document.getElementById('new-type');
+    var form = document.getElementById('add-question');
+    if (!select || !form) { return; }
+    function sync() {
+      var type = select.value;
+      form.querySelectorAll('.limits').forEach(function (group) {
+        group.hidden = group.dataset.type !== type;
+      });
+      var options = form.querySelector('.options');
+      if (options) {
+        options.hidden = (type !== 'single' && type !== 'multi');
+      }
+    }
+    select.addEventListener('change', sync);
+    sync();
+  })();
+
+  (function () {
+    document.querySelectorAll('button.add-option').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var fieldset = button.closest('fieldset.options');
+        var buttonRow = button.closest('p');
+        if (!fieldset || !buttonRow) { return; }
+        var row = document.createElement('p');
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.name = 'option';
+        input.value = '';
+        input.setAttribute('aria-label', '选项内容');
+        row.appendChild(input);
+        if (fieldset.dataset.withOid === 'true') {
+          // 新选项的 oid 留空，由服务端分配稳定标识。
+          var oid = document.createElement('input');
+          oid.type = 'hidden';
+          oid.name = 'oid';
+          oid.value = '';
+          row.appendChild(oid);
+        }
+        fieldset.insertBefore(row, buttonRow);
+        input.focus();
+      });
+    });
+  })();
+</script>
+<p><a href="/surveys/{{ survey.id }}/publish">去发布</a></p>
+{% endif %}
+<p><a href="/surveys">返回我的问卷</a></p>
+{% endblock %}

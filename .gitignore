@@ -1,0 +1,23 @@
+# Local agent resources and scratch files
+.claude/
+.codex/
+.agents/
+.serena/
+init.bat
+init.ps1
+
+# Secrets and local environments
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Project-local MongoDB instance (data + logs)
+.mongodb/
+.DS_Store
+Thumbs.db
